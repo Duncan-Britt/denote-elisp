@@ -29,10 +29,11 @@
 ;;; Code:
 
 (require 'denote)
+(require 'vc-git)
 
 ;; https://protesilaos.com/codelog/2022-10-30-demo-denote-custom-file-type/
 
-(setq denote-elisp-front-matter
+(defvar denote-elisp-front-matter
       ";;; --%1$s_%3$s@@%4$s.el --- %1$s -*- lexical-binding: t -*-
 ;; title: %1$s
 ;; keywords: %3$s
@@ -40,7 +41,10 @@
 ;; identifier: %4$s
 ;; signature: %5$s
 
-")
+"
+      "Elisp front matter.
+It is passed to ‘format’ with arguments TITLE, DATE, KEYWORDS,
+ID.  Advanced users are advised to consult Info node ‘(denote)")
 
 (defun denote-elisp-format-keywords-for-front-matter (keywords)
   "Format front matter KEYWORDS for elisp file type.
@@ -70,8 +74,6 @@ Also see `denote-elisp-link-in-context-regexp'.")
           "\\[" "\\(?2:" ".*?" "\\)" "]]")
   "Regexp to match an Org link in its context.
 The format of such links is `denote-elisp-link-format'.")
-
-(setq saved-denote-file-types denote-file-types)
 
 (add-to-list 'denote-file-types
              '(elisp :extension ".el"
