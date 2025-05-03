@@ -34,15 +34,18 @@
 ;; https://protesilaos.com/codelog/2022-10-30-demo-denote-custom-file-type/
 
 (defvar denote-elisp-front-matter
-      ";;; --%1$s_%3$s@@%4$s.el --- %1$s -*- lexical-binding: t -*-
+  ";;; --%1$s_%3$s@@%4$s.el --- %1$s -*- lexical-binding: t -*-
+
+;;; Commentary:
 ;; title: %1$s
 ;; keywords: %3$s
 ;; date: %2$s
 ;; identifier: %4$s
 ;; signature: %5$s
 
+;;; Code:
 "
-      "Elisp front matter.
+  "Elisp front matter.
 It is passed to ‘format’ with arguments TITLE, DATE, KEYWORDS,
 ID.  Advanced users are advised to consult Info node ‘(denote)")
 
@@ -108,6 +111,11 @@ The format of such links is `denote-elisp-link-format'.")
                               file-name))
            (module-name (file-name-base file-name)))
       (with-current-buffer (find-file-noselect full-path)
+        ;; Update header line
+        (goto-char (point-min))
+        (when (re-search-forward "^;;; \\([^[:space:]\n]+\\) --- .*$" nil t)
+          (replace-match file-name nil nil nil 1))
+
         ;; Update the provide statement and footer
         (goto-char (point-max))
         (if (re-search-backward "^(provide '\\([^)]+\\))" nil t)
