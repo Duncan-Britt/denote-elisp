@@ -102,9 +102,13 @@ The format of such links is `denote-elisp-link-format'.")
 (defun denote-elisp--after-new-note-hook ()
   "Add footer after creating a new note."
   (when (eq 'elisp (cdr (assq 'file-type denote-current-data)))
-    (let* ((file-name (format "--%s__%s@@%s.el"
+    (let* ((file-name (format "--%s%s@@%s.el"
                               (cdr (assq 'title denote-current-data))
-                              (string-join (cdr (assq 'keywords denote-current-data)) "_")
+                              (if-let (keywords (cdr (assq 'keywords denote-current-data)))
+                                (progn
+                                  (print keywords)
+                                  (concat "__" (string-join keywords "_")))
+                              "")
                               (cdr (assq 'id denote-current-data))))
            (full-path (format "%s%s"
                               (cdr (assq 'directory denote-current-data))
@@ -139,9 +143,13 @@ The format of such links is `denote-elisp-link-format'.")
   "Rewrite header and footer lines to match new file name.
 Hook to run after the file is renamed."
   (when (eq 'elisp (cdr (assq 'file-type denote-current-data)))
-    (let* ((file-name (format "--%s__%s@@%s.el"
+    (let* ((file-name (format "--%s%s@@%s.el"
                               (cdr (assq 'title denote-current-data))
-                              (string-join (cdr (assq 'keywords denote-current-data)) "_")
+                              (if-let (keywords (cdr (assq 'keywords denote-current-data)))
+                                  (progn
+                                    (print keywords)
+                                    (concat "__" (string-join keywords "_")))
+                                "")
                               (cdr (assq 'id denote-current-data))))
            (full-path (format "%s%s"
                               (cdr (assq 'directory denote-current-data))
@@ -172,24 +180,28 @@ Hook to run after the file is renamed."
                             file-name)))
           (save-buffer))))))
 
-;; (let ((denote-current-data '((title . "boo-far")
-;;                              (keywords "organization" "thinking")
-;;                              (signature . "")
-;;                              (directory . "/Users/duncan/code/my-emacs-packages/denote-elisp/")
-;;                              (date 26643 31736)
-;;                              (id . "20250501T074944")
-;;                              (file-type . elisp)
-;;                              (template . ""))))
-;;   (let* ((file-name (format "--%s__%s@@%s.el"
-;;                             (cdr (assq 'title denote-current-data))
-;;                             (string-join (cdr (assq 'keywords denote-current-data)) "_")
-;;                             (cdr (assq 'id denote-current-data))))
-;;          (full-path (format "%s%s"
-;;                             (cdr (assq 'directory denote-current-data))
-;;                             file-name))
-;;          (buffer (find-file-noselect full-path))
-;;          (module-name (file-name-base file-name)))
-;;     file-name))
+(let ((denote-current-data '((title . "boo-far")
+                             (keywords "organization" "thinking")
+                             (signature . "")
+                             (directory . "/Users/duncan/code/my-emacs-packages/denote-elisp/")
+                             (date 26643 31736)
+                             (id . "20250501T074944")
+                             (file-type . elisp)
+                             (template . ""))))
+  (let* ((file-name (format "--%s%s@@%s.el"
+                            (cdr (assq 'title denote-current-data))
+                            (if-let (keywords (cdr (assq 'keywords denote-current-data)))
+                                (progn
+                                  (print keywords)
+                                  (concat "__" (string-join keywords "_")))
+                              "")
+                            (cdr (assq 'id denote-current-data))))
+         (full-path (format "%s%s"
+                            (cdr (assq 'directory denote-current-data))
+                            file-name))
+         (buffer (find-file-noselect full-path))
+         (module-name (file-name-base file-name)))
+    file-name))
 
 (add-hook 'denote-after-rename-file-hook #'denote-elisp--after-rename-hook)
 (add-hook 'denote-after-new-note-hook #'denote-elisp--after-new-note-hook)
