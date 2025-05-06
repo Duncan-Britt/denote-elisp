@@ -99,7 +99,7 @@ The format of such links is `denote-elisp-link-format'.")
                      :link denote-elisp-link-format
                      :link-in-context-regexp denote-elisp-link-in-context-regexp))
 
-(defun denote-elisp--after-new-note-hook ()
+(defun denote-elisp--after-new-note ()
   "Add footer after creating a new note."
   (when (eq 'elisp (cdr (assq 'file-type denote-current-data)))
     (let* ((file-name (format "--%s%s@@%s.el"
@@ -139,7 +139,7 @@ The format of such links is `denote-elisp-link-format'.")
         (save-buffer)
         (move-beginning-of-line -1)))))
 
-(defun denote-elisp--after-rename-hook ()
+(defun denote-elisp--after-rename ()
   "Rewrite header and footer lines to match new file name.
 Hook to run after the file is renamed."
   (when (eq 'elisp (cdr (assq 'file-type denote-current-data)))
@@ -180,9 +180,6 @@ Hook to run after the file is renamed."
                             file-name)))
           (save-buffer))))))
 
-(add-hook 'denote-after-rename-file-hook #'denote-elisp--after-rename-hook) ;; FIXME doesn't handle no confirmation
-(add-hook 'denote-after-new-note-hook #'denote-elisp--after-new-note-hook)
-
 (defun within-user-emacs-directory-p (file-path)
   "Check if FILE-PATH is within the user's Emacs directory."
   (string-prefix-p (expand-file-name user-emacs-directory)
@@ -215,9 +212,13 @@ FORCE-DEFAULT-DIRECTORY is NIL."
           (denote-use-file-type 'elisp)
           (denote-file-name-components-order '(title keywords identifier signature))
           (prev-name (file-name-base (buffer-file-name))))
-      (call-interactively 'denote-rename-file)
-      (let ((new-name (file-name-base (buffer-file-name))))
-        (denote-elisp-update-requires prev-name new-name))))
+      (condition-case nil
+          (prog1
+              (call-interactively 'denote-rename-file)
+            (denote-elisp--after-rename)
+            (let ((new-name (file-name-base (buffer-file-name))))
+              (denote-elisp-update-requires prev-name new-name)))
+        (quit nil))))
 
 (defun denote-elisp ()
   "Call denote with local directory."
@@ -229,7 +230,11 @@ FORCE-DEFAULT-DIRECTORY is NIL."
                                                t))
         (denote-use-file-type 'elisp)
         (denote-file-name-components-order '(title keywords identifier signature)))
-    (call-interactively 'denote)))
+    (condition-case nil
+        (prog1
+            (call-interactively 'denote)
+          (denote-elisp--after-new-note))
+        (quit nil))))
 
 (provide 'denote-elisp)
 ;;; denote-elisp.el ends here
