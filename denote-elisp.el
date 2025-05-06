@@ -114,6 +114,7 @@ The format of such links is `denote-elisp-link-format'.")
                               (cdr (assq 'directory denote-current-data))
                               file-name))
            (module-name (file-name-base file-name)))
+
       (with-current-buffer (find-file-noselect full-path)
         ;; Update header line
         (goto-char (point-min))
@@ -155,30 +156,31 @@ Hook to run after the file is renamed."
                               (cdr (assq 'directory denote-current-data))
                               file-name))
            (module-name (file-name-base file-name)))
-      (with-current-buffer (find-file-noselect full-path)
-        (save-excursion
-          ;; Update header line
-          (goto-char (point-min))
-          (when (re-search-forward "^;;; \\([^[:space:]\n]+\\) --- .*$" nil t)
-            (replace-match file-name nil nil nil 1))
+      (when (file-exists-p full-path)
+        (with-current-buffer (find-file-noselect full-path)
+          (save-excursion
+            ;; Update header line
+            (goto-char (point-min))
+            (when (re-search-forward "^;;; \\([^[:space:]\n]+\\) --- .*$" nil t)
+              (replace-match file-name nil nil nil 1))
 
-          ;; Update the provide statement and footer
-          (goto-char (point-max))
-          (if (re-search-backward "^(provide '\\([^)]+\\))" nil t)
-              (replace-match module-name nil nil nil 1)
+            ;; Update the provide statement and footer
             (goto-char (point-max))
-            (newline)
-            (insert (format "(provide '%s)"
-                            module-name)))
+            (if (re-search-backward "^(provide '\\([^)]+\\))" nil t)
+                (replace-match module-name nil nil nil 1)
+              (goto-char (point-max))
+              (newline)
+              (insert (format "(provide '%s)"
+                              module-name)))
 
-          (goto-char (point-max))
-          (if (re-search-backward "^;;; \\([^[:space:]\n]+\\) ends here$" nil t)
-              (replace-match file-name nil nil nil 1)
             (goto-char (point-max))
-            (newline)
-            (insert (format ";;; %s ends here"
-                            file-name)))
-          (save-buffer))))))
+            (if (re-search-backward "^;;; \\([^[:space:]\n]+\\) ends here$" nil t)
+                (replace-match file-name nil nil nil 1)
+              (goto-char (point-max))
+              (newline)
+              (insert (format ";;; %s ends here"
+                              file-name)))
+            (save-buffer)))))))
 
 (defun within-user-emacs-directory-p (file-path)
   "Check if FILE-PATH is within the user's Emacs directory."
