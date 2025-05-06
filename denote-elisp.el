@@ -180,29 +180,44 @@ Hook to run after the file is renamed."
                             file-name)))
           (save-buffer))))))
 
-(add-hook 'denote-after-rename-file-hook #'denote-elisp--after-rename-hook)
+(add-hook 'denote-after-rename-file-hook #'denote-elisp--after-rename-hook) ;; FIXME doesn't handle no confirmation
 (add-hook 'denote-after-new-note-hook #'denote-elisp--after-new-note-hook)
+
+(defun within-user-emacs-directory-p (file-path)
+  "Check if FILE-PATH is within the user's Emacs directory."
+  (string-prefix-p (expand-file-name user-emacs-directory)
+                   (expand-file-name file-path)))
+
+(defun denote-elisp-update-requires (prev-name new-name &optional force-default-directory)
+  "Replace (require 'PREV-NAME) with (require 'NEW-NAME).
+Use `default-directory' unless within `user-emacs-directory' and
+FORCE-DEFAULT-DIRECTORY is NIL."
+  (let* ((current-dir (file-name-directory (buffer-file-name))) ;;=> "/Users/duncan/code/my-emacs-packages/denote-elisp/"
+         (elisp-directory (if (or force-default-directory
+                                  (not (within-user-emacs-directory-p (buffer-file-name))))
+                              default-directory
+                            user-emacs-directory)))
+    (save-excursion
+      (let ((prior-buffers (mapcar #'buffer-name (buffer-list))))
+        (dolist (file (directory-files-recursively default-directory "\\.el$"))
+          (with-current-buffer (find-file-noselect file)
+            (goto-char (point-min))
+            (while (search-forward (concat "(require '" prev-name ")") nil t)
+              (replace-match (concat "(require '" new-name ")")))
+            (save-buffer)
+            (unless (member (buffer-name) prior-buffers)
+              (kill-buffer))))))))
 
 (defun denote-elisp-rename-file ()
     "Call denote-rename-file with local directory keywords."
     (interactive)
     (let ((denote-directory default-directory)
           (denote-use-file-type 'elisp)
-          (denote-file-name-components-order '(title keywords identifier signature)))
-      (call-interactively 'denote-rename-file)))
-
-(defun denote-elisp-dired-rename-marked-files ()
-  "Call denote-dired-rename-marked-files.
-First prompt for elisp directory and set file type to elisp."
-  (interactive)
-  (let ((denote-directory (read-directory-name "Enter directory path: "
-                                               (or (vc-git-root default-directory)
-                                                   default-directory)
-                                               nil
-                                               t))
-        (denote-use-file-type 'elisp)
-        (denote-file-name-components-order '(title keywords identifier signature)))
-    (call-interactively 'denote-dired-rename-marked-files)))
+          (denote-file-name-components-order '(title keywords identifier signature))
+          (prev-name (file-name-base (buffer-file-name))))
+      (call-interactively 'denote-rename-file)
+      (let ((new-name (file-name-base (buffer-file-name))))
+        (denote-elisp-update-requires prev-name new-name))))
 
 (defun denote-elisp ()
   "Call denote with local directory."
@@ -217,4 +232,4 @@ First prompt for elisp directory and set file type to elisp."
     (call-interactively 'denote)))
 
 (provide 'denote-elisp)
-;; denote-elisp.el ends here
+;;; denote-elisp.el ends here
