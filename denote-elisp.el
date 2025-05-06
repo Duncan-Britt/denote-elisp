@@ -191,14 +191,14 @@ Hook to run after the file is renamed."
   "Replace (require 'PREV-NAME) with (require 'NEW-NAME).
 Use `default-directory' unless within `user-emacs-directory' and
 FORCE-DEFAULT-DIRECTORY is NIL."
-  (let* ((current-dir (file-name-directory (buffer-file-name))) ;;=> "/Users/duncan/code/my-emacs-packages/denote-elisp/"
-         (elisp-directory (if (or force-default-directory
-                                  (not (within-user-emacs-directory-p (buffer-file-name))))
+  (let* ((elisp-directory (if (or force-default-directory
+                                  (and (buffer-file-name)
+                                       (not (within-user-emacs-directory-p (buffer-file-name)))))
                               default-directory
                             user-emacs-directory)))
     (save-excursion
       (let ((prior-buffers (mapcar #'buffer-name (buffer-list))))
-        (dolist (file (directory-files-recursively default-directory "\\.el$"))
+        (dolist (file (directory-files-recursively elisp-directory "\\.el$"))
           (with-current-buffer (find-file-noselect file)
             (goto-char (point-min))
             (while (search-forward (concat "(require '" prev-name ")") nil t)
