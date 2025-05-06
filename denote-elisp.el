@@ -33,6 +33,30 @@
 
 ;; https://protesilaos.com/codelog/2022-10-30-demo-denote-custom-file-type/
 
+;;;###autoload (put 'denote-elisp-directory 'safe-local-variable (lambda (val) (or (stringp val) (eq val 'local) (eq val 'default-directory))))
+(defcustom denote-elisp-directory (expand-file-name "lisp" user-emacs-directory)
+  "Directory for storing personal denote-elisp files.
+
+If you intend to reference this variable in Lisp, consider using
+the function `denote-elisp=directory' instead."
+  :group 'denote-elisp
+  :safe (lambda (val) (or (stringp val) (eq val 'local) (eq val 'default-directory)))
+  ;; :package-version '(denote-elisp . "1.0.0")
+  :type 'directory)
+
+(defun denote-elisp--make-denote-directory ()
+  "Make the variable `denote-elisp-directory' and its parents, if needed."
+  (when (not (file-directory-p denote-directory))
+    (make-directory denote-directory :parents)))
+
+(defun denote-elisp-directory ()
+  "Return path of variable `denote-elisp-directory' as a proper directory.
+Custom Lisp code can `let' bind the variable `denote-elisp-directory'
+to override what this function returns."
+  (let ((denote-elisp-directory (file-name-as-directory (expand-file-name denote-elisp-directory))))
+    (denote-elisp--make-denote-directory)
+    denote-directory))
+
 (defvar denote-elisp-front-matter
   ";;; --%1$s_%3$s@@%4$s.el --- %1$s -*- lexical-binding: t -*-
 
@@ -187,25 +211,18 @@ Hook to run after the file is renamed."
   (string-prefix-p (expand-file-name user-emacs-directory)
                    (expand-file-name file-path)))
 
-(defun denote-elisp-update-requires (prev-name new-name &optional force-default-directory)
-  "Replace (require 'PREV-NAME) with (require 'NEW-NAME).
-Use `default-directory' unless within `user-emacs-directory' and
-FORCE-DEFAULT-DIRECTORY is NIL."
-  (let* ((elisp-directory (if (or force-default-directory
-                                  (and (buffer-file-name)
-                                       (not (within-user-emacs-directory-p (buffer-file-name)))))
-                              default-directory
-                            user-emacs-directory)))
-    (save-excursion
+(defun denote-elisp-update-requires (prev-name new-name)
+  "Replace (require 'PREV-NAME) with (require 'NEW-NAME)."
+  (save-excursion
       (let ((prior-buffers (mapcar #'buffer-name (buffer-list))))
-        (dolist (file (directory-files-recursively elisp-directory "\\.el$"))
+        (dolist (file (directory-files-recursively (denote-elisp-directory) "\\.el$"))
           (with-current-buffer (find-file-noselect file)
             (goto-char (point-min))
             (while (search-forward (concat "(require '" prev-name ")") nil t)
               (replace-match (concat "(require '" new-name ")")))
             (save-buffer)
             (unless (member (buffer-name) prior-buffers)
-              (kill-buffer))))))))
+              (kill-buffer)))))))
 
 (defun denote-elisp-rename-file ()
     "Call denote-rename-file with local directory keywords."
@@ -225,11 +242,7 @@ FORCE-DEFAULT-DIRECTORY is NIL."
 (defun denote-elisp ()
   "Call denote with local directory."
   (interactive)
-  (let ((denote-directory (read-directory-name "Enter directory path: "
-                                               (or (vc-git-root default-directory)
-                                                   default-directory)
-                                               nil
-                                               t))
+  (let ((denote-directory (denote-elisp-directory))
         (denote-use-file-type 'elisp)
         (denote-file-name-components-order '(title keywords identifier signature)))
     (condition-case nil
