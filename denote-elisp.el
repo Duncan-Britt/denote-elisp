@@ -55,7 +55,7 @@ Custom Lisp code can `let' bind the variable `denote-elisp-directory'
 to override what this function returns."
   (let ((denote-elisp-directory (file-name-as-directory (expand-file-name denote-elisp-directory))))
     (denote-elisp--make-denote-directory)
-    denote-directory))
+    denote-elisp-directory))
 
 (defvar denote-elisp-front-matter
   ";;; --%1$s_%3$s@@%4$s.el --- %1$s -*- lexical-binding: t -*-
